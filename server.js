@@ -1,20 +1,27 @@
+require('dotenv').config();
 const express = require('express');
-const mysql = require('mysql2');
-const dbConfig = require('./config/db');
-
-const connection = mysql.createConnection(dbConfig);
-
-connection.connect(error => {
-    if (error) {
-        console.error('Error connecting to the database:', error);
-    } else {
-        console.log('Connected to the database!');
-    }
-});
+const cookieParser = require('cookie-parser')
+const cors = require('cors')
+const router = require('./routes/index')
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
+app.use(express.json());
+app.use(cookieParser());
+app.use(cors());
+app.use('/api', router);
+
+const { sequelize } = require('./models');
+
+sequelize
+  .sync()
+  .then(() => {
+    console.log('Connected to the database!');
+    app.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+    });
+  })
+  .catch((error) => {
+    console.error('Error connecting to the database:', error);
+  });
