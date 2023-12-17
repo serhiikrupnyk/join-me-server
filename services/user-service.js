@@ -3,14 +3,15 @@ const bcrypt = require('bcrypt');
 const uuid = require('uuid');
 const mailService = require('./mail-service');
 const tokenService = require('./token-service');
-const { UserDto } = require('../dtos/user-dto')
+const { UserDto } = require('../dtos/user-dto');
+const ApiError = require('../exceptions/api-error');
 
 class UserService {
     async registration(firstName, lastName, email, password) {
         const candidate = await User.findOne({ where: {email} });
 
         if (candidate) {
-            throw new Error(`User with email ${email} is already exist`);
+            throw ApiError.BadRequest(`User with email ${email} is already exist`);
         }
         const hashPassword = await bcrypt.hash(password, 3);
         const activationLink = uuid.v4();
@@ -26,11 +27,22 @@ class UserService {
 
         const userDto = new UserDto(user);
         const tokens = tokenService.generateTokens({...userDto});
-        console.log('userDto: ', userDto);
+
         await tokenService.saveToken(userDto.id, tokens.refreshToken);
 
         return { ...tokens, user: userDto }
-    }   
+    }
+    
+    async activate(activationLink) {
+        const user = await User.findOne({ where: {activationLink} });
+
+        if (!user) {
+            throw ApiError.BadRequest('Invalid activation link');
+        }
+
+        user.isActivated = true;
+        await user.save();
+    }
 }
 
 module.exports = new UserService();
