@@ -10,7 +10,7 @@ router.post('/registration',
     body('password').isLength({ min: 6 }),
     UserController.registration
 );
-router.post('/login');
+router.post('/login', UserController.login);
 router.post('/logout');
 router.get('/activate/:link', UserController.activate);
 router.get('/refresh');
