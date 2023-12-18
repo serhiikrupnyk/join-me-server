@@ -5,6 +5,7 @@ const mailService = require('./mail-service');
 const tokenService = require('./token-service');
 const { UserDto } = require('../dtos/user-dto');
 const ApiError = require('../exceptions/api-error');
+const { where } = require('sequelize');
 
 class UserService {
     async registration(firstName, lastName, email, password) {
@@ -63,6 +64,11 @@ class UserService {
         await tokenService.saveToken(userDto.id, tokens.refreshToken);
 
         return { ...tokens, user: userDto }
+    }
+
+    async logout(refreshToken) {
+        const token = await tokenService.removeToken(refreshToken);
+        return token;
     }
 }
 
