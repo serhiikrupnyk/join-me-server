@@ -92,6 +92,38 @@ class UserService {
         return { ...tokens, user: userDto }
     }
 
+    async forgot(email) {
+        const user = await User.findOne({ where: {email} });
+
+        if (!user) {
+            throw ApiError.BadRequest('User with this email not found');
+        }
+
+        const userDto = new UserDto(user);
+        const tokens = tokenService.generateTokens({...userDto});
+
+        await tokenService.saveToken(userDto.id, tokens.refreshToken);
+
+        const link = `http://localhost:5000/api/reset-password/${userDto.id}/${tokens.refreshToken}`;
+        console.log(link);
+
+        return link;
+    }
+
+    async resetPassword(id, accessToken, password) {
+        const user = await User.findOne({ where: {id} });
+
+        if (!user) {
+            throw ApiError.BadRequest('User not found');
+        }
+        
+        const hashPassword = await bcrypt.hash(password, 3);
+
+        user.password = hashPassword;
+
+        await user.save();
+    }
+
     async getAllUsers() {
         const users = await User.findAll();
 
