@@ -83,6 +83,40 @@ class UserController {
         }
     }
 
+    async forgotPassword(req, res, next) {
+        try {
+            const { email } = req.body;
+            const link = await userService.forgot(email);
+
+            return res.json(link);
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    async getReset(req, res, next) {
+        try {
+            const { id, accessToken } = req.params;
+
+            return res.redirect(`${process.env.CLIENT_URL}/reset-password/${id}/${accessToken}`);
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    async resetPassword(req, res, next) {
+        try {
+            const { id, accessToken } = req.params;
+            const { password } = req.body;
+
+            const userData = await userService.resetPassword(id, accessToken, password);
+
+            return res.redirect(process.env.CLIENT_URL);
+        } catch (e) {
+            next(e);
+        }
+    }
+
     async getUsers(req, res, next) {
         try {
             const users = await userService.getAllUsers();
