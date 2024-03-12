@@ -104,8 +104,9 @@ class UserService {
 
         await tokenService.saveToken(userDto.id, tokens.refreshToken);
 
-        const link = `http://localhost:5000/api/reset-password/${userDto.id}/${tokens.refreshToken}`;
-        console.log(link);
+        const link = `${process.env.API_URL}/api/reset-password/${userDto.id}/${tokens.refreshToken}`;
+
+        await mailService.sendResetPasswordMail(email, link);
 
         return link;
     }

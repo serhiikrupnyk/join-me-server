@@ -98,7 +98,7 @@ class UserController {
         try {
             const { id, accessToken } = req.params;
 
-            return res.json(req.params);
+            return res.redirect(`${process.env.CLIENT_URL}/reset-password/${id}/${accessToken}`);
         } catch (e) {
             next(e);
         }

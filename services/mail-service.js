@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer')
 const emailTemplate = require('../templates/email')
+const resetPasswordTemplate = require('../templates/resetPassword')
 
 class MailService {
     constructor() {
@@ -25,6 +26,19 @@ class MailService {
             subject: 'Account activating',
             text: '',
             html: emailTemplate(link)
+        })
+    }
+
+    async sendResetPasswordMail(to, link) {
+        await this.transporter.sendMail({
+            from: {
+                name: 'Join Me',
+                address: process.env.SMTP_USER
+            },
+            to,
+            subject: 'Reset Password',
+            text: '',
+            html: resetPasswordTemplate(link)
         })
     }
 }
