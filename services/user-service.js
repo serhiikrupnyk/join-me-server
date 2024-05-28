@@ -1,135 +1,138 @@
-const { User } = require('../models');
-const bcrypt = require('bcrypt');
-const uuid = require('uuid');
-const mailService = require('./mail-service');
-const tokenService = require('./token-service');
-const { UserDto } = require('../dtos/user-dto');
-const ApiError = require('../exceptions/api-error');
-const { where } = require('sequelize');
+const { User } = require("../models");
+const bcrypt = require("bcrypt");
+const uuid = require("uuid");
+const mailService = require("./mail-service");
+const tokenService = require("./token-service");
+const { UserDto } = require("../dtos/user-dto");
+const ApiError = require("../exceptions/api-error");
+const { where } = require("sequelize");
 
 class UserService {
-    async registration(firstName, lastName, email, password) {
-        const candidate = await User.findOne({ where: {email} });
+  async registration(firstName, lastName, email, password) {
+    const candidate = await User.findOne({ where: { email } });
 
-        if (candidate) {
-            throw ApiError.BadRequest(`User with email ${email} is already exist`);
-        }
-        const hashPassword = await bcrypt.hash(password, 3);
-        const activationLink = uuid.v4();
-        const user = await User.create({
-            firstName,
-            lastName,
-            email,
-            password: hashPassword,
-            activationLink
-        });
-
-        await mailService.sendActivationMail(email, `${process.env.API_URL}/api/activate/${activationLink}`);
-
-        const userDto = new UserDto(user);
-        const tokens = tokenService.generateTokens({...userDto});
-
-        await tokenService.saveToken(userDto.id, tokens.refreshToken);
-
-        return { ...tokens, user: userDto }
+    if (candidate) {
+      throw ApiError.BadRequest(`User with email ${email} is already exist`);
     }
-    
-    async activate(activationLink) {
-        const user = await User.findOne({ where: {activationLink} });
+    const hashPassword = await bcrypt.hash(password, 3);
+    const activationLink = uuid.v4();
+    const user = await User.create({
+      firstName,
+      lastName,
+      email,
+      password: hashPassword,
+      activationLink,
+    });
 
-        if (!user) {
-            throw ApiError.BadRequest('Invalid activation link');
-        }
+    await mailService.sendActivationMail(
+      email,
+      `${process.env.API_URL}/api/activate/${activationLink}`
+    );
 
-        user.isActivated = true;
-        await user.save();
-    }
+    const userDto = new UserDto(user);
+    const tokens = tokenService.generateTokens({ ...userDto });
 
-    async login(email, password) {
-        const user = await User.findOne({ where: {email} });
+    await tokenService.saveToken(userDto.id, tokens.refreshToken);
 
-        if (!user) {
-            throw ApiError.BadRequest('User with this email not found');
-        }
+    return { ...tokens, user: userDto };
+  }
 
-        const isPassEquals = await bcrypt.compare(password, user.password);
+  async activate(activationLink) {
+    const user = await User.findOne({ where: { activationLink } });
 
-        if (!isPassEquals) {
-            throw ApiError.BadRequest('Incorrect password');
-        }
-
-        const userDto = new UserDto(user);
-        const tokens = tokenService.generateTokens({...userDto});
-
-        await tokenService.saveToken(userDto.id, tokens.refreshToken);
-
-        return { ...tokens, user: userDto }
+    if (!user) {
+      throw ApiError.BadRequest("Invalid activation link");
     }
 
-    async logout(refreshToken) {
-        const token = await tokenService.removeToken(refreshToken);
-        return token;
+    user.isActivated = true;
+    await user.save();
+  }
+
+  async login(email, password) {
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      throw ApiError.BadRequest("User with this email not found");
     }
 
-    async refresh(refreshToken) {
-        if(!refreshToken) {
-            throw ApiError.UnauthorizedError();
-        }
+    const isPassEquals = await bcrypt.compare(password, user.password);
 
-        const userData = tokenService.validateRefreshToken(refreshToken);
-        const tokenFromDb = tokenService.findToken(refreshToken);
-
-        if(!userData || !tokenFromDb) {
-            throw ApiError.UnauthorizedError();
-        }
-
-        const user = await User.findByPk(userData.id);
-        const userDto = new UserDto(user);
-        const tokens = tokenService.generateTokens({...userDto});
-
-        await tokenService.saveToken(userDto.id, tokens.refreshToken);
-
-        return { ...tokens, user: userDto }
+    if (!isPassEquals) {
+      throw ApiError.BadRequest("Incorrect password");
     }
 
-    async forgot(email) {
-        const user = await User.findOne({ where: {email} });
+    const userDto = new UserDto(user);
+    const tokens = tokenService.generateTokens({ ...userDto });
 
-        if (!user) {
-            throw ApiError.BadRequest('User with this email not found');
-        }
+    await tokenService.saveToken(userDto.id, tokens.refreshToken);
 
-        const userDto = new UserDto(user);
-        const tokens = tokenService.generateTokens({...userDto});
+    return { ...tokens, user: userDto };
+  }
 
-        await tokenService.saveToken(userDto.id, tokens.refreshToken);
+  async logout(refreshToken) {
+    const token = await tokenService.removeToken(refreshToken);
+    return token;
+  }
 
-        const link = `${process.env.API_URL}/api/reset-password/${userDto.id}/${tokens.refreshToken}`;
-
-        await mailService.sendResetPasswordMail(email, link);
-
-        return link;
+  async refresh(refreshToken) {
+    if (!refreshToken) {
+      throw ApiError.UnauthorizedError();
     }
 
-    async resetPassword(id, accessToken, password) {
-        const user = await User.findOne({ where: {id} });
+    const userData = tokenService.validateRefreshToken(refreshToken);
+    const tokenFromDb = tokenService.findToken(refreshToken);
 
-        if (!user) {
-            throw ApiError.BadRequest('User not found');
-        }
-        
-        const hashPassword = await bcrypt.hash(password, 3);
-
-        user.password = hashPassword;
-
-        await user.save();
+    if (!userData || !tokenFromDb) {
+      throw ApiError.UnauthorizedError();
     }
 
-    async getAllUsers() {
-        const users = await User.findAll();
+    const user = await User.findByPk(userData.id);
+    const userDto = new UserDto(user);
+    const tokens = tokenService.generateTokens({ ...userDto });
 
-        return users;
+    await tokenService.saveToken(userDto.id, tokens.refreshToken);
+
+    return { ...tokens, user: userDto };
+  }
+
+  async forgot(email) {
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      throw ApiError.BadRequest("User with this email not found");
     }
+
+    const userDto = new UserDto(user);
+    const tokens = tokenService.generateTokens({ ...userDto });
+
+    await tokenService.saveToken(userDto.id, tokens.refreshToken);
+
+    const link = `${process.env.API_URL}/api/reset-password/${userDto.id}/${tokens.refreshToken}`;
+
+    await mailService.sendResetPasswordMail(email, link);
+
+    return link;
+  }
+
+  async resetPassword(id, accessToken, password) {
+    const user = await User.findOne({ where: { id } });
+
+    if (!user) {
+      throw ApiError.BadRequest("User not found");
+    }
+
+    const hashPassword = await bcrypt.hash(password, 3);
+
+    user.password = hashPassword;
+
+    await user.save();
+  }
+
+  async getAllUsers() {
+    const users = await User.findAll();
+
+    return users;
+  }
 }
 
 module.exports = new UserService();
