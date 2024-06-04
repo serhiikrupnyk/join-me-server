@@ -129,6 +129,21 @@ class UserController {
       next(e);
     }
   }
+
+  async updateUser(req, res, next) {
+    try {
+      const { firstName, lastName, email } = req.body;
+      const userData = await userService.updateUser(
+        firstName,
+        lastName,
+        email
+      );
+
+      return res.json(userData);
+    } catch (e) {
+      next(e);
+    }
+  }
 }
 
 module.exports = new UserController();

@@ -20,5 +20,6 @@ router.get("/reset-password/:id/:accessToken", UserController.getReset);
 router.post("/reset-password/:id/:accessToken", UserController.resetPassword);
 router.get("/refresh", UserController.refresh);
 router.get("/users", authMiddleware, UserController.getUsers);
+router.post("/update-user", UserController.updateUser);
 
 module.exports = router;

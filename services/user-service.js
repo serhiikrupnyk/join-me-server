@@ -8,6 +8,30 @@ const ApiError = require("../exceptions/api-error");
 const { where } = require("sequelize");
 
 class UserService {
+  async updateUser(firstName, lastName, email) {
+    const candidate = await User.findOne({ where: { email } });
+
+    if (!candidate) {
+      throw new ApiError.BadRequest(`User with email ${email} does not exist`);
+    }
+
+    const updatedUser = await User.update(
+      {
+        firstName,
+        lastName,
+      },
+      {
+        where: { email },
+        returning: true,
+        plain: true,
+      }
+    );
+
+    const userDto = new UserDto(updatedUser[1]);
+
+    return { user: userDto };
+  }
+
   async registration(firstName, lastName, email, password) {
     const candidate = await User.findOne({ where: { email } });
 
